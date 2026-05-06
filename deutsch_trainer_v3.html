@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Deutsch">
+<meta name="theme-color" content="#0f0f14">
+<title>Deutsch Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0f14;--surface:#17171f;--border:#2a2a38;--text:#e8e6f0;--muted:#6b6880;
+  --der:#4f8ef7;--die:#f74f8e;--das:#4ff7a0;--wrong:#f74f4f;--card-bg:#1c1c26;
+  --dativ:#f7c44f;--akk:#b04ff7;--gen:#4fd4f7;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;overflow:hidden;overscroll-behavior:none}
+body{display:flex;flex-direction:column;align-items:center;min-height:100vh;min-height:-webkit-fill-available;padding:env(safe-area-inset-top,14px) 14px env(safe-area-inset-bottom,14px)}
+
+.nav{width:100%;max-width:440px;display:flex;justify-content:space-between;align-items:center;padding:6px 0 10px}
+.nav-title{font-family:'Fraunces',serif;font-size:19px;font-weight:700;letter-spacing:-.5px}
+.nav-title span{font-style:italic;font-weight:300;color:var(--muted)}
+.stats-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;padding:5px 10px;border-radius:20px;cursor:pointer}
+.stats-btn:active{background:var(--border)}
+
+.install-banner{width:100%;max-width:440px;background:color-mix(in srgb,var(--der) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--der) 30%,transparent);border-radius:11px;padding:9px 13px;font-size:11px;color:var(--muted);margin-bottom:10px;display:none;line-height:1.5}
+.install-banner.show{display:block}
+.install-banner strong{color:var(--text)}
+
+.module-tabs{width:100%;max-width:440px;display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.module-tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;text-align:center;transition:all .2s;white-space:nowrap;letter-spacing:.04em}
+.tab.active{color:var(--text);border-color:var(--der);background:color-mix(in srgb,var(--der) 10%,var(--surface))}
+.tab:active{opacity:.7}
+
+.progress-wrap{width:100%;max-width:440px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.progress-bar{flex:1;height:3px;background:var(--border);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--der),var(--die));transition:width .4s ease}
+.progress-label{font-size:10px;color:var(--muted);min-width:32px;text-align:right}
+.streak-row{font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:.05em}
+.streak-row strong{color:#f7a74f;font-weight:400}
+
+.card-wrap{width:100%;max-width:440px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.card{width:100%;background:var(--card-bg);border:1px solid var(--border);border-radius:22px;padding:28px 22px 22px;text-align:center;position:relative;overflow:hidden;transition:border-color .3s}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--der),var(--die),var(--das));opacity:.4}
+.card.correct{border-color:var(--das);animation:pulse-c .4s ease}
+.card.wrong{border-color:var(--wrong);animation:shake .4s ease}
+@keyframes pulse-c{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.retry-badge{position:absolute;top:10px;right:10px;background:color-mix(in srgb,var(--wrong) 15%,var(--surface));border:1px solid color-mix(in srgb,var(--wrong) 40%,transparent);border-radius:7px;font-size:9px;color:var(--wrong);padding:2px 6px;letter-spacing:.08em;display:none}
+.word-cat{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.word{font-family:'Fraunces',serif;font-size:42px;font-weight:700;line-height:1.05;letter-spacing:-1.5px;margin-bottom:6px;word-break:break-word}
+.word-sub{font-size:12px;color:var(--muted);min-height:16px;transition:opacity .3s;line-height:1.45;white-space:pre-wrap}
+.word-sub.hidden{opacity:0}
+.feedback{margin-top:12px;font-size:12px;min-height:40px;opacity:0;transition:opacity .25s;letter-spacing:.03em;line-height:1.5;white-space:pre-wrap;font-family:'DM Mono',monospace}
+.feedback.show{opacity:1}
+.feedback.correct-fb{color:var(--das)}
+.feedback.wrong-fb{color:var(--wrong)}
+
+.session-complete{display:none;text-align:center;flex-direction:column;align-items:center;gap:12px}
+.session-complete.show{display:flex}
+.sc-emoji{font-size:52px}.sc-title{font-family:'Fraunces',serif;font-size:26px;font-weight:700;letter-spacing:-1px}
+.sc-sub{font-size:12px;color:var(--muted)}
+.sc-btn{background:var(--card-bg);border:1px solid var(--border);color:var(--text);font-family:'Fraunces',serif;font-size:16px;padding:13px 32px;border-radius:13px;cursor:pointer;margin-top:6px}
+
+.art-buttons{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.btn{padding:13px 6px;border-radius:13px;border:1px solid var(--border);font-family:'Fraunces',serif;font-size:21px;font-weight:700;cursor:pointer;transition:all .15s;background:var(--surface);color:var(--text);letter-spacing:-1px;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .15s;border-radius:inherit}
+.btn:active::after{opacity:.15}.btn:active{transform:scale(.96)}
+.btn .lbl{display:block;font-family:'DM Mono',monospace;font-size:9px;font-weight:300;letter-spacing:.1em;color:var(--muted);margin-top:2px;text-transform:uppercase}
+.btn-der{color:var(--der);border-color:color-mix(in srgb,var(--der) 30%,transparent)}.btn-der::after{background:var(--der)}
+.btn-die{color:var(--die);border-color:color-mix(in srgb,var(--die) 30%,transparent)}.btn-die::after{background:var(--die)}
+.btn-das{color:var(--das);border-color:color-mix(in srgb,var(--das) 30%,transparent)}.btn-das::after{background:var(--das)}
+@keyframes flash-g{50%{background:color-mix(in srgb,var(--das) 20%,var(--surface))}}
+@keyframes flash-r{50%{background:color-mix(in srgb,var(--wrong) 20%,var(--surface))}}
+.flash-correct{animation:flash-g .4s ease}.flash-wrong{animation:flash-r .4s ease}
+
+.caso-buttons{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:12px}
+.btn-dativ{color:var(--dativ);border-color:color-mix(in srgb,var(--dativ) 30%,transparent);font-size:12px;padding:15px 4px;letter-spacing:.03em}
+.btn-dativ::after{background:var(--dativ)}
+.btn-akk{color:var(--akk);border-color:color-mix(in srgb,var(--akk) 30%,transparent);font-size:12px;padding:15px 4px;letter-spacing:.03em}
+.btn-akk::after{background:var(--akk)}
+.btn-gen{color:var(--gen);border-color:color-mix(in srgb,var(--gen) 30%,transparent);font-size:12px;padding:15px 4px;letter-spacing:.03em}
+.btn-gen::after{background:var(--gen)}
+
+.hint-row{width:100%;max-width:440px;display:flex;justify-content:center;margin-top:8px}
+.hint-btn{background:none;border:none;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer;padding:5px 14px;border-radius:20px}
+.hint-btn:active{color:var(--text)}
+
+/* PREPLIST */
+.preplist-wrap{width:100%;max-width:440px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:20px}
+.pg-group{margin-bottom:20px}
+.pg-label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:8px}
+.pg-item{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:6px}
+.pg-prep{font-family:'Fraunces',serif;font-size:19px;font-weight:700;margin-bottom:3px}
+.pg-example{font-size:11px;color:var(--muted);margin-bottom:4px;white-space:pre-line;line-height:1.4}
+.pg-tr{font-size:11px;color:#3a3a50;font-style:italic}
+
+/* STATS */
+.stats-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:100;flex-direction:column;align-items:center;padding:env(safe-area-inset-top,14px) 14px env(safe-area-inset-bottom,14px);overflow-y:auto}
+.stats-screen.active{display:flex}
+.stats-hdr{width:100%;max-width:440px;display:flex;justify-content:space-between;align-items:center;padding:6px 0 16px}
+.stats-hdr h2{font-family:'Fraunces',serif;font-size:20px;font-weight:700}
+.close-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:15px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.stats-grid{width:100%;max-width:440px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:14px 10px;text-align:center}
+.stat-val{font-family:'Fraunces',serif;font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1}
+.stat-lbl{font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:.1em;text-transform:uppercase}
+.sec-title{width:100%;max-width:440px;font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:8px;margin-top:2px}
+.hard-list{width:100%;max-width:440px;display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.hard-row{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:9px 13px;display:flex;justify-content:space-between;align-items:center}
+.hard-name{font-family:'Fraunces',serif;font-size:15px}
+.hard-meta{font-size:10px;color:var(--muted);text-align:right}
+.hard-bar{height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:3px;width:60px}
+.hard-fill{height:100%;border-radius:99px;background:var(--wrong)}
+.reset-btn{width:100%;max-width:440px;background:none;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;padding:11px;border-radius:10px;cursor:pointer;margin:6px 0 20px}
+</style>
+</head>
+<body>
+
+<div id="main" style="display:flex;flex-direction:column;align-items:center;width:100%;flex:1">
+  <nav class="nav">
+    <div class="nav-title">Deutsch <span>Trainer</span></div>
+    <button class="stats-btn" onclick="showStats()">stats →</button>
+  </nav>
+
+  <div id="install-banner" class="install-banner">
+    <strong>💡 iPhone:</strong> Safari → compartir □↑ → "Agregar a pantalla de inicio"
+    <br><span onclick="dismissInstall()" style="color:var(--der);cursor:pointer">Entendido ✕</span>
+  </div>
+
+  <div class="module-tabs">
+    <button class="tab active" id="tab-artikel"  onclick="switchModule('artikel')">🔤 Artículos</button>
+    <button class="tab"        id="tab-caso"     onclick="switchModule('caso')">⚡ Caso</button>
+    <button class="tab"        id="tab-frase"    onclick="switchModule('frase')">📝 Frase</button>
+    <button class="tab"        id="tab-preplist" onclick="switchModule('preplist')">📋 Lista</button>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">0/20</div>
+  </div>
+  <div class="streak-row" id="streak-row">racha: <strong id="streak-num">0</strong> ✦</div>
+
+  <!-- TRAINING AREA -->
+  <div class="card-wrap" id="card-wrap">
+    <div class="card" id="main-card">
+      <div id="retry-badge" class="retry-badge">↩ Wiederholung</div>
+      <div class="word-cat"  id="word-cat">—</div>
+      <div class="word"      id="word-display">—</div>
+      <div class="word-sub hidden" id="word-sub">—</div>
+      <div class="feedback"  id="feedback"></div>
+    </div>
+    <div class="session-complete" id="session-complete">
+      <div class="sc-emoji" id="sc-emoji">🎯</div>
+      <div class="sc-title" id="sc-title">Sehr gut!</div>
+      <div class="sc-sub"   id="sc-sub"></div>
+      <button class="sc-btn" onclick="startSession()">Neue Runde</button>
+    </div>
+  </div>
+
+  <!-- PREPLIST VIEW -->
+  <div class="preplist-wrap" id="preplist-view" style="display:none"></div>
+
+  <!-- BUTTONS -->
+  <div class="art-buttons" id="art-buttons">
+    <button class="btn btn-der" onclick="answerArtikel('der')" id="btn-der">der<span class="lbl">maskulin</span></button>
+    <button class="btn btn-die" onclick="answerArtikel('die')" id="btn-die">die<span class="lbl">feminin</span></button>
+    <button class="btn btn-das" onclick="answerArtikel('das')" id="btn-das">das<span class="lbl">neutrum</span></button>
+  </div>
+
+  <div class="caso-buttons" id="caso-buttons" style="display:none">
+    <button class="btn btn-dativ" onclick="answerCaso('dativ')"     id="btn-dativ">Dativ<span class="lbl">dem/der</span></button>
+    <button class="btn btn-akk"   onclick="answerCaso('akkusativ')" id="btn-akk">Akkus.<span class="lbl">den/die/das</span></button>
+    <button class="btn btn-gen"   onclick="answerCaso('genitiv')"   id="btn-gen">Genitiv<span class="lbl">des/der</span></button>
+  </div>
+
+  <div class="hint-row" id="hint-row">
+    <button class="hint-btn" onclick="showHint()">Übersetzung zeigen</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-screen" id="stats-screen">
+  <div class="stats-hdr"><h2>Statistik</h2><button class="close-btn" onclick="hideStats()">✕</button></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">Versuche</div></div>
+    <div class="stat-card"><div class="stat-val" id="s-acc">–</div><div class="stat-lbl">Genauigkeit</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--der)" id="s-streak">0</div><div class="stat-lbl">Beste Serie</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--das)" id="s-mastered">0</div><div class="stat-lbl">Gemeistert</div></div>
+  </div>
+  <div class="sec-title">Schwierigste Artikel</div>
+  <div class="hard-list" id="hard-words"></div>
+  <div class="sec-title">Schwierigste Präpositionen</div>
+  <div class="hard-list" id="hard-preps"></div>
+  <button class="reset-btn" onclick="confirmReset()">↺ Fortschritt zurücksetzen</button>
+</div>
+
+<script>
+// ── VOCAB ──────────────────────────────────────────────
+const WORDS=[
+  {w:"Mann",a:"der",t:"der Mann",c:"Personen"},{w:"Vater",a:"der",t:"der Vater",c:"Familie"},
+  {w:"Bruder",a:"der",t:"der Bruder",c:"Familie"},{w:"Sohn",a:"der",t:"der Sohn",c:"Familie"},
+  {w:"Onkel",a:"der",t:"der Onkel",c:"Familie"},{w:"Freund",a:"der",t:"der Freund",c:"Personen"},
+  {w:"Lehrer",a:"der",t:"der Lehrer",c:"Beruf"},{w:"Arzt",a:"der",t:"der Arzt",c:"Beruf"},
+  {w:"Chef",a:"der",t:"der Chef",c:"Beruf"},{w:"Tisch",a:"der",t:"der Tisch",c:"Haus"},
+  {w:"Stuhl",a:"der",t:"der Stuhl",c:"Haus"},{w:"Schrank",a:"der",t:"der Schrank",c:"Haus"},
+  {w:"Boden",a:"der",t:"der Boden",c:"Haus"},{w:"Schlüssel",a:"der",t:"der Schlüssel",c:"Haus"},
+  {w:"Hund",a:"der",t:"der Hund",c:"Tiere"},{w:"Vogel",a:"der",t:"der Vogel",c:"Tiere"},
+  {w:"Fisch",a:"der",t:"der Fisch",c:"Tiere"},{w:"Bär",a:"der",t:"der Bär",c:"Tiere"},
+  {w:"Affe",a:"der",t:"der Affe",c:"Tiere"},{w:"Apfel",a:"der",t:"der Apfel",c:"Essen"},
+  {w:"Kuchen",a:"der",t:"der Kuchen",c:"Essen"},{w:"Käse",a:"der",t:"der Käse",c:"Essen"},
+  {w:"Wein",a:"der",t:"der Wein",c:"Essen"},{w:"Saft",a:"der",t:"der Saft",c:"Essen"},
+  {w:"Tag",a:"der",t:"der Tag",c:"Zeit"},{w:"Monat",a:"der",t:"der Monat",c:"Zeit"},
+  {w:"Sommer",a:"der",t:"der Sommer",c:"Zeit"},{w:"Winter",a:"der",t:"der Winter",c:"Zeit"},
+  {w:"Herbst",a:"der",t:"der Herbst",c:"Zeit"},{w:"Frühling",a:"der",t:"der Frühling",c:"Zeit"},
+  {w:"Bahnhof",a:"der",t:"der Bahnhof",c:"Stadt"},{w:"Zug",a:"der",t:"der Zug",c:"Stadt"},
+  {w:"Bus",a:"der",t:"der Bus",c:"Stadt"},{w:"Park",a:"der",t:"der Park",c:"Stadt"},
+  {w:"Markt",a:"der",t:"der Markt",c:"Stadt"},{w:"Berg",a:"der",t:"der Berg",c:"Natur"},
+  {w:"Fluss",a:"der",t:"der Fluss",c:"Natur"},{w:"Wald",a:"der",t:"der Wald",c:"Natur"},
+  {w:"Wind",a:"der",t:"der Wind",c:"Natur"},{w:"Schnee",a:"der",t:"der Schnee",c:"Natur"},
+  {w:"Mantel",a:"der",t:"der Mantel",c:"Kleidung"},{w:"Hut",a:"der",t:"der Hut",c:"Kleidung"},
+  {w:"Gürtel",a:"der",t:"der Gürtel",c:"Kleidung"},{w:"Rock",a:"der",t:"der Rock",c:"Kleidung"},
+  {w:"Computer",a:"der",t:"der Computer",c:"Technik"},{w:"Bildschirm",a:"der",t:"der Bildschirm",c:"Technik"},
+  {w:"Drucker",a:"der",t:"der Drucker",c:"Technik"},{w:"Stecker",a:"der",t:"der Stecker",c:"Technik"},
+  {w:"Arm",a:"der",t:"der Arm",c:"Körper"},{w:"Finger",a:"der",t:"der Finger",c:"Körper"},
+  {w:"Rücken",a:"der",t:"der Rücken",c:"Körper"},{w:"Kopf",a:"der",t:"der Kopf",c:"Körper"},
+  {w:"Mund",a:"der",t:"der Mund",c:"Körper"},{w:"Zahn",a:"der",t:"der Zahn",c:"Körper"},
+  {w:"Hals",a:"der",t:"der Hals",c:"Körper"},{w:"Bauch",a:"der",t:"der Bauch",c:"Körper"},
+  {w:"Fuß",a:"der",t:"der Fuß",c:"Körper"},{w:"Hunger",a:"der",t:"der Hunger",c:"Gefühle"},
+  {w:"Durst",a:"der",t:"der Durst",c:"Gefühle"},{w:"Schmerz",a:"der",t:"der Schmerz",c:"Gefühle"},
+  {w:"Traum",a:"der",t:"der Traum",c:"Gefühle"},{w:"Wunsch",a:"der",t:"der Wunsch",c:"Gefühle"},
+  {w:"Gedanke",a:"der",t:"der Gedanke",c:"Abstrakt"},{w:"Fehler",a:"der",t:"der Fehler",c:"Abstrakt"},
+  {w:"Erfolg",a:"der",t:"der Erfolg",c:"Abstrakt"},{w:"Mut",a:"der",t:"der Mut",c:"Abstrakt"},
+  {w:"Grund",a:"der",t:"der Grund",c:"Abstrakt"},{w:"Einfluss",a:"der",t:"der Einfluss",c:"Abstrakt"},
+  {w:"Anfang",a:"der",t:"der Anfang",c:"Abstrakt"},{w:"Plan",a:"der",t:"der Plan",c:"Abstrakt"},
+  {w:"Sinn",a:"der",t:"der Sinn",c:"Abstrakt"},{w:"Wert",a:"der",t:"der Wert",c:"Abstrakt"},
+  {w:"Begriff",a:"der",t:"der Begriff",c:"Abstrakt"},{w:"Schritt",a:"der",t:"der Schritt",c:"Abstrakt"},
+  {w:"Fortschritt",a:"der",t:"der Fortschritt",c:"Abstrakt"},{w:"Unterschied",a:"der",t:"der Unterschied",c:"Abstrakt"},
+  {w:"Vorteil",a:"der",t:"der Vorteil",c:"Abstrakt"},{w:"Nachteil",a:"der",t:"der Nachteil",c:"Abstrakt"},
+  {w:"Preis",a:"der",t:"der Preis",c:"Wirtschaft"},{w:"Rabatt",a:"der",t:"der Rabatt",c:"Wirtschaft"},
+  {w:"Vertrag",a:"der",t:"der Vertrag",c:"Wirtschaft"},{w:"Kredit",a:"der",t:"der Kredit",c:"Wirtschaft"},
+  {w:"Beruf",a:"der",t:"der Beruf",c:"Beruf"},{w:"Lohn",a:"der",t:"der Lohn",c:"Beruf"},
+  {w:"Urlaub",a:"der",t:"der Urlaub",c:"Beruf"},{w:"Streik",a:"der",t:"der Streik",c:"Beruf"},
+  {w:"Bericht",a:"der",t:"der Bericht",c:"Beruf"},{w:"Vorschlag",a:"der",t:"der Vorschlag",c:"Beruf"},
+  {w:"Staat",a:"der",t:"der Staat",c:"Gesellschaft"},{w:"Krieg",a:"der",t:"der Krieg",c:"Gesellschaft"},
+  {w:"Frieden",a:"der",t:"der Frieden",c:"Gesellschaft"},{w:"Verein",a:"der",t:"der Verein",c:"Gesellschaft"},
+  {w:"Zeuge",a:"der",t:"der Zeuge",c:"Gesellschaft"},{w:"Richter",a:"der",t:"der Richter",c:"Gesellschaft"},
+  {w:"Bürger",a:"der",t:"der Bürger",c:"Gesellschaft"},{w:"Kandidat",a:"der",t:"der Kandidat",c:"Gesellschaft"},
+  {w:"Spieler",a:"der",t:"der Spieler",c:"Sport"},{w:"Sieg",a:"der",t:"der Sieg",c:"Sport"},
+  {w:"Rekord",a:"der",t:"der Rekord",c:"Sport"},{w:"Nebel",a:"der",t:"der Nebel",c:"Natur"},
+  {w:"Regen",a:"der",t:"der Regen",c:"Natur"},{w:"Sturm",a:"der",t:"der Sturm",c:"Natur"},
+  {w:"Blitz",a:"der",t:"der Blitz",c:"Natur"},{w:"Sand",a:"der",t:"der Sand",c:"Natur"},
+  {w:"Stein",a:"der",t:"der Stein",c:"Natur"},{w:"Löffel",a:"der",t:"der Löffel",c:"Haus"},
+  {w:"Teller",a:"der",t:"der Teller",c:"Haus"},{w:"Topf",a:"der",t:"der Topf",c:"Haus"},
+  {w:"Herd",a:"der",t:"der Herd",c:"Haus"},{w:"Kühlschrank",a:"der",t:"der Kühlschrank",c:"Haus"},
+  {w:"Spiegel",a:"der",t:"der Spiegel",c:"Haus"},{w:"Teppich",a:"der",t:"der Teppich",c:"Haus"},
+  {w:"Stift",a:"der",t:"der Stift",c:"Kultur"},{w:"Bleistift",a:"der",t:"der Bleistift",c:"Kultur"},
+  {w:"Roman",a:"der",t:"der Roman",c:"Kultur"},{w:"Rhythmus",a:"der",t:"der Rhythmus",c:"Kultur"},
+  {w:"Kollege",a:"der",t:"der Kollege",c:"Beruf"},{w:"Anwalt",a:"der",t:"der Anwalt",c:"Gesellschaft"},
+  {w:"Soldat",a:"der",t:"der Soldat",c:"Gesellschaft"},{w:"Präsident",a:"der",t:"der Präsident",c:"Gesellschaft"},
+  // DIE
+  {w:"Frau",a:"die",t:"die Frau",c:"Personen"},{w:"Mutter",a:"die",t:"die Mutter",c:"Familie"},
+  {w:"Schwester",a:"die",t:"die Schwester",c:"Familie"},{w:"Tochter",a:"die",t:"die Tochter",c:"Familie"},
+  {w:"Tante",a:"die",t:"die Tante",c:"Familie"},{w:"Freundin",a:"die",t:"die Freundin",c:"Personen"},
+  {w:"Lehrerin",a:"die",t:"die Lehrerin",c:"Beruf"},{w:"Ärztin",a:"die",t:"die Ärztin",c:"Beruf"},
+  {w:"Küche",a:"die",t:"die Küche",c:"Haus"},{w:"Lampe",a:"die",t:"die Lampe",c:"Haus"},
+  {w:"Tür",a:"die",t:"die Tür",c:"Haus"},{w:"Wand",a:"die",t:"die Wand",c:"Haus"},
+  {w:"Pflanze",a:"die",t:"die Pflanze",c:"Haus"},{w:"Katze",a:"die",t:"die Katze",c:"Tiere"},
+  {w:"Maus",a:"die",t:"die Maus",c:"Tiere"},{w:"Kuh",a:"die",t:"die Kuh",c:"Tiere"},
+  {w:"Schlange",a:"die",t:"die Schlange",c:"Tiere"},{w:"Biene",a:"die",t:"die Biene",c:"Tiere"},
+  {w:"Gans",a:"die",t:"die Gans",c:"Tiere"},{w:"Ente",a:"die",t:"die Ente",c:"Tiere"},
+  {w:"Spinne",a:"die",t:"die Spinne",c:"Tiere"},{w:"Kartoffel",a:"die",t:"die Kartoffel",c:"Essen"},
+  {w:"Tomate",a:"die",t:"die Tomate",c:"Essen"},{w:"Wurst",a:"die",t:"die Wurst",c:"Essen"},
+  {w:"Milch",a:"die",t:"die Milch",c:"Essen"},{w:"Butter",a:"die",t:"die Butter",c:"Essen"},
+  {w:"Suppe",a:"die",t:"die Suppe",c:"Essen"},{w:"Zwiebel",a:"die",t:"die Zwiebel",c:"Essen"},
+  {w:"Birne",a:"die",t:"die Birne",c:"Essen"},{w:"Erdbeere",a:"die",t:"die Erdbeere",c:"Essen"},
+  {w:"Sahne",a:"die",t:"die Sahne",c:"Essen"},{w:"Nacht",a:"die",t:"die Nacht",c:"Zeit"},
+  {w:"Woche",a:"die",t:"die Woche",c:"Zeit"},{w:"Stunde",a:"die",t:"die Stunde",c:"Zeit"},
+  {w:"Minute",a:"die",t:"die Minute",c:"Zeit"},{w:"Straße",a:"die",t:"die Straße",c:"Stadt"},
+  {w:"Brücke",a:"die",t:"die Brücke",c:"Stadt"},{w:"Kirche",a:"die",t:"die Kirche",c:"Stadt"},
+  {w:"Schule",a:"die",t:"die Schule",c:"Stadt"},{w:"Bibliothek",a:"die",t:"die Bibliothek",c:"Stadt"},
+  {w:"Wohnung",a:"die",t:"die Wohnung",c:"Stadt"},{w:"Haltestelle",a:"die",t:"die Haltestelle",c:"Stadt"},
+  {w:"Blume",a:"die",t:"die Blume",c:"Natur"},{w:"Sonne",a:"die",t:"die Sonne",c:"Natur"},
+  {w:"Wolke",a:"die",t:"die Wolke",c:"Natur"},{w:"Erde",a:"die",t:"die Erde",c:"Natur"},
+  {w:"Luft",a:"die",t:"die Luft",c:"Natur"},{w:"Natur",a:"die",t:"die Natur",c:"Natur"},
+  {w:"Küste",a:"die",t:"die Küste",c:"Natur"},{w:"Insel",a:"die",t:"die Insel",c:"Natur"},
+  {w:"Wüste",a:"die",t:"die Wüste",c:"Natur"},{w:"Hose",a:"die",t:"die Hose",c:"Kleidung"},
+  {w:"Bluse",a:"die",t:"die Bluse",c:"Kleidung"},{w:"Jacke",a:"die",t:"die Jacke",c:"Kleidung"},
+  {w:"Mütze",a:"die",t:"die Mütze",c:"Kleidung"},{w:"Tasche",a:"die",t:"die Tasche",c:"Kleidung"},
+  {w:"Socke",a:"die",t:"die Socke",c:"Kleidung"},{w:"Krawatte",a:"die",t:"die Krawatte",c:"Kleidung"},
+  {w:"Tastatur",a:"die",t:"die Tastatur",c:"Technik"},{w:"Kamera",a:"die",t:"die Kamera",c:"Technik"},
+  {w:"Batterie",a:"die",t:"die Batterie",c:"Technik"},{w:"Hand",a:"die",t:"die Hand",c:"Körper"},
+  {w:"Nase",a:"die",t:"die Nase",c:"Körper"},{w:"Schulter",a:"die",t:"die Schulter",c:"Körper"},
+  {w:"Brust",a:"die",t:"die Brust",c:"Körper"},{w:"Hüfte",a:"die",t:"die Hüfte",c:"Körper"},
+  {w:"Lippe",a:"die",t:"die Lippe",c:"Körper"},{w:"Stirn",a:"die",t:"die Stirn",c:"Körper"},
+  {w:"Wange",a:"die",t:"die Wange",c:"Körper"},{w:"Freude",a:"die",t:"die Freude",c:"Gefühle"},
+  {w:"Angst",a:"die",t:"die Angst",c:"Gefühle"},{w:"Trauer",a:"die",t:"die Trauer",c:"Gefühle"},
+  {w:"Liebe",a:"die",t:"die Liebe",c:"Gefühle"},{w:"Hoffnung",a:"die",t:"die Hoffnung",c:"Abstrakt"},
+  {w:"Wahrheit",a:"die",t:"die Wahrheit",c:"Abstrakt"},{w:"Freiheit",a:"die",t:"die Freiheit",c:"Abstrakt"},
+  {w:"Lösung",a:"die",t:"die Lösung",c:"Abstrakt"},{w:"Frage",a:"die",t:"die Frage",c:"Abstrakt"},
+  {w:"Antwort",a:"die",t:"die Antwort",c:"Abstrakt"},{w:"Aufgabe",a:"die",t:"die Aufgabe",c:"Abstrakt"},
+  {w:"Meinung",a:"die",t:"die Meinung",c:"Abstrakt"},{w:"Pflicht",a:"die",t:"die Pflicht",c:"Abstrakt"},
+  {w:"Schuld",a:"die",t:"die Schuld",c:"Abstrakt"},{w:"Bedeutung",a:"die",t:"die Bedeutung",c:"Abstrakt"},
+  {w:"Fähigkeit",a:"die",t:"die Fähigkeit",c:"Abstrakt"},{w:"Möglichkeit",a:"die",t:"die Möglichkeit",c:"Abstrakt"},
+  {w:"Gelegenheit",a:"die",t:"die Gelegenheit",c:"Abstrakt"},{w:"Steuer",a:"die",t:"die Steuer",c:"Wirtschaft"},
+  {w:"Rechnung",a:"die",t:"die Rechnung",c:"Wirtschaft"},{w:"Währung",a:"die",t:"die Währung",c:"Wirtschaft"},
+  {w:"Wirtschaft",a:"die",t:"die Wirtschaft",c:"Wirtschaft"},{w:"Werkstatt",a:"die",t:"die Werkstatt",c:"Beruf"},
+  {w:"Fabrik",a:"die",t:"die Fabrik",c:"Beruf"},{w:"Abteilung",a:"die",t:"die Abteilung",c:"Beruf"},
+  {w:"Kollegin",a:"die",t:"die Kollegin",c:"Beruf"},{w:"Gesellschaft",a:"die",t:"die Gesellschaft",c:"Gesellschaft"},
+  {w:"Regierung",a:"die",t:"die Regierung",c:"Gesellschaft"},{w:"Politik",a:"die",t:"die Politik",c:"Gesellschaft"},
+  {w:"Gerechtigkeit",a:"die",t:"die Gerechtigkeit",c:"Gesellschaft"},{w:"Beziehung",a:"die",t:"die Beziehung",c:"Gesellschaft"},
+  {w:"Mannschaft",a:"die",t:"die Mannschaft",c:"Sport"},{w:"Niederlage",a:"die",t:"die Niederlage",c:"Sport"},
+  {w:"Meisterschaft",a:"die",t:"die Meisterschaft",c:"Sport"},{w:"Sprache",a:"die",t:"die Sprache",c:"Kultur"},
+  {w:"Kunst",a:"die",t:"die Kunst",c:"Kultur"},{w:"Musik",a:"die",t:"die Musik",c:"Kultur"},
+  {w:"Geschichte",a:"die",t:"die Geschichte",c:"Kultur"},{w:"Wissenschaft",a:"die",t:"die Wissenschaft",c:"Kultur"},
+  {w:"Zeitung",a:"die",t:"die Zeitung",c:"Kultur"},{w:"Uhr",a:"die",t:"die Uhr",c:"Haus"},
+  {w:"Kerze",a:"die",t:"die Kerze",c:"Haus"},{w:"Gabel",a:"die",t:"die Gabel",c:"Haus"},
+  {w:"Pfanne",a:"die",t:"die Pfanne",c:"Haus"},{w:"Treppe",a:"die",t:"die Treppe",c:"Haus"},
+  {w:"Schublade",a:"die",t:"die Schublade",c:"Haus"},{w:"Flasche",a:"die",t:"die Flasche",c:"Haus"},
+  // DAS
+  {w:"Kind",a:"das",t:"das Kind",c:"Personen"},{w:"Baby",a:"das",t:"das Baby",c:"Personen"},
+  {w:"Mädchen",a:"das",t:"das Mädchen",c:"Personen"},{w:"Buch",a:"das",t:"das Buch",c:"Kultur"},
+  {w:"Heft",a:"das",t:"das Heft",c:"Kultur"},{w:"Bild",a:"das",t:"das Bild",c:"Kultur"},
+  {w:"Lied",a:"das",t:"das Lied",c:"Kultur"},{w:"Theater",a:"das",t:"das Theater",c:"Kultur"},
+  {w:"Konzert",a:"das",t:"das Konzert",c:"Kultur"},{w:"Museum",a:"das",t:"das Museum",c:"Kultur"},
+  {w:"Gedicht",a:"das",t:"das Gedicht",c:"Kultur"},{w:"Instrument",a:"das",t:"das Instrument",c:"Kultur"},
+  {w:"Gemälde",a:"das",t:"das Gemälde",c:"Kultur"},{w:"Denkmal",a:"das",t:"das Denkmal",c:"Kultur"},
+  {w:"Bett",a:"das",t:"das Bett",c:"Haus"},{w:"Sofa",a:"das",t:"das Sofa",c:"Haus"},
+  {w:"Fenster",a:"das",t:"das Fenster",c:"Haus"},{w:"Dach",a:"das",t:"das Dach",c:"Haus"},
+  {w:"Zimmer",a:"das",t:"das Zimmer",c:"Haus"},{w:"Badezimmer",a:"das",t:"das Badezimmer",c:"Haus"},
+  {w:"Wohnzimmer",a:"das",t:"das Wohnzimmer",c:"Haus"},{w:"Schlafzimmer",a:"das",t:"das Schlafzimmer",c:"Haus"},
+  {w:"Messer",a:"das",t:"das Messer",c:"Haus"},{w:"Glas",a:"das",t:"das Glas",c:"Haus"},
+  {w:"Regal",a:"das",t:"das Regal",c:"Haus"},{w:"Kissen",a:"das",t:"das Kissen",c:"Haus"},
+  {w:"Handtuch",a:"das",t:"das Handtuch",c:"Haus"},{w:"Pferd",a:"das",t:"das Pferd",c:"Tiere"},
+  {w:"Lamm",a:"das",t:"das Lamm",c:"Tiere"},{w:"Huhn",a:"das",t:"das Huhn",c:"Tiere"},
+  {w:"Ferkel",a:"das",t:"das Ferkel",c:"Tiere"},{w:"Kalb",a:"das",t:"das Kalb",c:"Tiere"},
+  {w:"Insekt",a:"das",t:"das Insekt",c:"Tiere"},{w:"Nest",a:"das",t:"das Nest",c:"Tiere"},
+  {w:"Brot",a:"das",t:"das Brot",c:"Essen"},{w:"Ei",a:"das",t:"das Ei",c:"Essen"},
+  {w:"Fleisch",a:"das",t:"das Fleisch",c:"Essen"},{w:"Gemüse",a:"das",t:"das Gemüse",c:"Essen"},
+  {w:"Obst",a:"das",t:"das Obst",c:"Essen"},{w:"Getränk",a:"das",t:"das Getränk",c:"Essen"},
+  {w:"Rezept",a:"das",t:"das Rezept",c:"Essen"},{w:"Mehl",a:"das",t:"das Mehl",c:"Essen"},
+  {w:"Öl",a:"das",t:"das Öl",c:"Essen"},{w:"Salz",a:"das",t:"das Salz",c:"Essen"},
+  {w:"Jahr",a:"das",t:"das Jahr",c:"Zeit"},{w:"Datum",a:"das",t:"das Datum",c:"Zeit"},
+  {w:"Jahrhundert",a:"das",t:"das Jahrhundert",c:"Zeit"},{w:"Jahrzehnt",a:"das",t:"das Jahrzehnt",c:"Zeit"},
+  {w:"Auto",a:"das",t:"das Auto",c:"Stadt"},{w:"Fahrrad",a:"das",t:"das Fahrrad",c:"Stadt"},
+  {w:"Flugzeug",a:"das",t:"das Flugzeug",c:"Stadt"},{w:"Schiff",a:"das",t:"das Schiff",c:"Stadt"},
+  {w:"Hotel",a:"das",t:"das Hotel",c:"Stadt"},{w:"Restaurant",a:"das",t:"das Restaurant",c:"Stadt"},
+  {w:"Gebäude",a:"das",t:"das Gebäude",c:"Stadt"},{w:"Dorf",a:"das",t:"das Dorf",c:"Stadt"},
+  {w:"Krankenhaus",a:"das",t:"das Krankenhaus",c:"Stadt"},{w:"Rathaus",a:"das",t:"das Rathaus",c:"Stadt"},
+  {w:"Meer",a:"das",t:"das Meer",c:"Natur"},{w:"Tal",a:"das",t:"das Tal",c:"Natur"},
+  {w:"Feld",a:"das",t:"das Feld",c:"Natur"},{w:"Gebirge",a:"das",t:"das Gebirge",c:"Natur"},
+  {w:"Ufer",a:"das",t:"das Ufer",c:"Natur"},{w:"Eis",a:"das",t:"das Eis",c:"Natur"},
+  {w:"Feuer",a:"das",t:"das Feuer",c:"Natur"},{w:"Wasser",a:"das",t:"das Wasser",c:"Natur"},
+  {w:"Licht",a:"das",t:"das Licht",c:"Natur"},{w:"Hemd",a:"das",t:"das Hemd",c:"Kleidung"},
+  {w:"Kleid",a:"das",t:"das Kleid",c:"Kleidung"},{w:"Shirt",a:"das",t:"das Shirt",c:"Kleidung"},
+  {w:"Handy",a:"das",t:"das Handy",c:"Technik"},{w:"Tablet",a:"das",t:"das Tablet",c:"Technik"},
+  {w:"Programm",a:"das",t:"das Programm",c:"Technik"},{w:"Netzwerk",a:"das",t:"das Netzwerk",c:"Technik"},
+  {w:"Passwort",a:"das",t:"das Passwort",c:"Technik"},{w:"Gerät",a:"das",t:"das Gerät",c:"Technik"},
+  {w:"Kabel",a:"das",t:"das Kabel",c:"Technik"},{w:"Signal",a:"das",t:"das Signal",c:"Technik"},
+  {w:"Auge",a:"das",t:"das Auge",c:"Körper"},{w:"Ohr",a:"das",t:"das Ohr",c:"Körper"},
+  {w:"Knie",a:"das",t:"das Knie",c:"Körper"},{w:"Herz",a:"das",t:"das Herz",c:"Körper"},
+  {w:"Gehirn",a:"das",t:"das Gehirn",c:"Körper"},{w:"Blut",a:"das",t:"das Blut",c:"Körper"},
+  {w:"Glück",a:"das",t:"das Glück",c:"Gefühle"},{w:"Gefühl",a:"das",t:"das Gefühl",c:"Gefühle"},
+  {w:"Vertrauen",a:"das",t:"das Vertrauen",c:"Gefühle"},{w:"Erlebnis",a:"das",t:"das Erlebnis",c:"Gefühle"},
+  {w:"Recht",a:"das",t:"das Recht",c:"Abstrakt"},{w:"Ergebnis",a:"das",t:"das Ergebnis",c:"Abstrakt"},
+  {w:"Ziel",a:"das",t:"das Ziel",c:"Abstrakt"},{w:"Risiko",a:"das",t:"das Risiko",c:"Abstrakt"},
+  {w:"Problem",a:"das",t:"das Problem",c:"Abstrakt"},{w:"Beispiel",a:"das",t:"das Beispiel",c:"Abstrakt"},
+  {w:"Konzept",a:"das",t:"das Konzept",c:"Abstrakt"},{w:"Verhältnis",a:"das",t:"das Verhältnis",c:"Abstrakt"},
+  {w:"Interesse",a:"das",t:"das Interesse",c:"Abstrakt"},{w:"Bewusstsein",a:"das",t:"das Bewusstsein",c:"Abstrakt"},
+  {w:"Werkzeug",a:"das",t:"das Werkzeug",c:"Beruf"},{w:"Projekt",a:"das",t:"das Projekt",c:"Beruf"},
+  {w:"Büro",a:"das",t:"das Büro",c:"Beruf"},{w:"Gehalt",a:"das",t:"das Gehalt",c:"Beruf"},
+  {w:"Team",a:"das",t:"das Team",c:"Beruf"},{w:"Produkt",a:"das",t:"das Produkt",c:"Wirtschaft"},
+  {w:"Angebot",a:"das",t:"das Angebot",c:"Wirtschaft"},{w:"Kapital",a:"das",t:"das Kapital",c:"Wirtschaft"},
+  {w:"Konto",a:"das",t:"das Konto",c:"Wirtschaft"},{w:"Einkommen",a:"das",t:"das Einkommen",c:"Wirtschaft"},
+  {w:"Spiel",a:"das",t:"das Spiel",c:"Sport"},{w:"Tor",a:"das",t:"das Tor",c:"Sport"},
+  {w:"Training",a:"das",t:"das Training",c:"Sport"},{w:"Land",a:"das",t:"das Land",c:"Gesellschaft"},
+  {w:"Volk",a:"das",t:"das Volk",c:"Gesellschaft"},{w:"System",a:"das",t:"das System",c:"Abstrakt"},
+  {w:"Gesetz",a:"das",t:"das Gesetz",c:"Gesellschaft"},{w:"Parlament",a:"das",t:"das Parlament",c:"Gesellschaft"},
+  {w:"Gericht",a:"das",t:"das Gericht",c:"Gesellschaft"},{w:"Unternehmen",a:"das",t:"das Unternehmen",c:"Wirtschaft"},
+  {w:"Wissen",a:"das",t:"das Wissen",c:"Kultur"},{w:"Fahrzeug",a:"das",t:"das Fahrzeug",c:"Stadt"},
+];
+
+// ── PREPS CASO ─────────────────────────────────────────
+const PREPS_CASO=[
+  {prep:"mit",         caso:"dativ",    hint:"Begleitung / Mittel",           ejemplo:"Ich fahre mit dem Bus zur Arbeit.",          tip:"Immer Dativ"},
+  {prep:"aus",         caso:"dativ",    hint:"Herkunft / Material",            ejemplo:"Er kommt aus der Schweiz.",                  tip:"Immer Dativ"},
+  {prep:"bei",         caso:"dativ",    hint:"Nähe / Aufenthalt",              ejemplo:"Ich wohne bei meiner Mutter.",               tip:"Immer Dativ"},
+  {prep:"nach",        caso:"dativ",    hint:"Richtung (Städte/Länder)",       ejemplo:"Wir fahren nach Berlin.",                    tip:"Immer Dativ"},
+  {prep:"seit",        caso:"dativ",    hint:"Zeitdauer (bis jetzt)",          ejemplo:"Ich lerne seit zwei Jahren Deutsch.",        tip:"Immer Dativ"},
+  {prep:"von",         caso:"dativ",    hint:"Herkunft / Zugehörigkeit",       ejemplo:"Das ist ein Geschenk von dem Chef.",         tip:"Immer Dativ"},
+  {prep:"zu",          caso:"dativ",    hint:"Richtung (Personen / Orte)",     ejemplo:"Ich gehe zu dem Arzt.",                     tip:"Immer Dativ"},
+  {prep:"außer",       caso:"dativ",    hint:"Ausnahme",                       ejemplo:"Außer dem Chef ist niemand da.",             tip:"Immer Dativ"},
+  {prep:"gegenüber",   caso:"dativ",    hint:"Lage — gegenüber",               ejemplo:"Das Café ist gegenüber dem Bahnhof.",        tip:"Immer Dativ"},
+  {prep:"ab",          caso:"dativ",    hint:"Ausgangspunkt (Zeit / Ort)",     ejemplo:"Ab dem nächsten Monat lerne ich mehr.",     tip:"Immer Dativ"},
+  {prep:"entgegen",    caso:"dativ",    hint:"entgegengesetzt",                ejemplo:"Er handelt entgegen dem Gesetz.",            tip:"Immer Dativ"},
+  {prep:"gemäß",       caso:"dativ",    hint:"laut / entsprechend",            ejemplo:"Gemäß dem Vertrag muss er zahlen.",          tip:"Immer Dativ"},
+  {prep:"durch",       caso:"akkusativ",hint:"Bewegung durch etwas",           ejemplo:"Wir gehen durch den Park.",                  tip:"Immer Akkusativ"},
+  {prep:"für",         caso:"akkusativ",hint:"Zweck / Empfänger",              ejemplo:"Das Geschenk ist für den Lehrer.",           tip:"Immer Akkusativ"},
+  {prep:"gegen",       caso:"akkusativ",hint:"Widerstand / Richtung",          ejemplo:"Er kämpft gegen den Wind.",                  tip:"Immer Akkusativ"},
+  {prep:"ohne",        caso:"akkusativ",hint:"Fehlen von etwas",               ejemplo:"Ich gehe ohne den Hund spazieren.",          tip:"Immer Akkusativ"},
+  {prep:"um",          caso:"akkusativ",hint:"Umkreis / Uhrzeit",              ejemplo:"Wir sitzen um den Tisch.",                   tip:"Immer Akkusativ"},
+  {prep:"bis",         caso:"akkusativ",hint:"zeitliche / räumliche Grenze",   ejemplo:"Ich warte bis den nächsten Zug.",            tip:"Immer Akkusativ"},
+  {prep:"entlang",     caso:"akkusativ",hint:"parallel zu etwas (nachgestellt)",ejemplo:"Wir laufen den Fluss entlang.",            tip:"Immer Akkusativ"},
+  {prep:"wider",       caso:"akkusativ",hint:"gegen (formell)",                ejemplo:"Das geht wider den Willen des Volkes.",      tip:"Immer Akkusativ"},
+  {prep:"wegen",       caso:"genitiv",  hint:"Ursache / Grund",                ejemplo:"Wegen des Regens bleiben wir zu Hause.",    tip:"Genitiv"},
+  {prep:"trotz",       caso:"genitiv",  hint:"obwohl / Konzession",            ejemplo:"Trotz des Fehlers hat er gewonnen.",        tip:"Genitiv"},
+  {prep:"statt/anstatt",caso:"genitiv", hint:"Ersatz / Alternative",           ejemplo:"Statt des Kuchens esse ich Obst.",          tip:"Genitiv"},
+  {prep:"während",     caso:"genitiv",  hint:"Zeitraum (während)",             ejemplo:"Während des Unterrichts schläft er.",       tip:"Genitiv"},
+  {prep:"innerhalb",   caso:"genitiv",  hint:"räumlich / zeitlich innen",      ejemplo:"Innerhalb des Hauses ist es warm.",         tip:"Genitiv"},
+  {prep:"außerhalb",   caso:"genitiv",  hint:"räumlich / zeitlich außen",      ejemplo:"Außerhalb der Stadt gibt es Ruhe.",         tip:"Genitiv"},
+  {prep:"aufgrund",    caso:"genitiv",  hint:"aufgrund von / wegen",           ejemplo:"Aufgrund des Wetters fällt das Spiel aus.", tip:"Genitiv"},
+  {prep:"mithilfe",    caso:"genitiv",  hint:"mit Hilfe von",                  ejemplo:"Mithilfe des Lehrers versteht er es.",      tip:"Genitiv"},
+  {prep:"angesichts",  caso:"genitiv",  hint:"in Anbetracht",                  ejemplo:"Angesichts der Lage müssen wir handeln.",   tip:"Genitiv"},
+  {prep:"infolge",     caso:"genitiv",  hint:"als Folge von",                  ejemplo:"Infolge des Unfalls kam es zu Staus.",      tip:"Genitiv"},
+  {prep:"jenseits",    caso:"genitiv",  hint:"auf der anderen Seite",          ejemplo:"Jenseits des Flusses liegt das Dorf.",      tip:"Genitiv"},
+  {prep:"diesseits",   caso:"genitiv",  hint:"auf dieser Seite",               ejemplo:"Diesseits der Grenze ist alles ruhig.",     tip:"Genitiv"},
+  // Wechsel — Dativ (Lage: wo?)
+  {prep:"in (Lage)",    caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Das Buch liegt in dem Regal.",              tip:"wo? → Dativ"},
+  {prep:"an (Lage)",    caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Das Bild hängt an der Wand.",               tip:"wo? → Dativ"},
+  {prep:"auf (Lage)",   caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Die Katze sitzt auf dem Tisch.",            tip:"wo? → Dativ"},
+  {prep:"über (Lage)",  caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Der Vogel fliegt über dem Haus.",           tip:"wo? → Dativ"},
+  {prep:"unter (Lage)", caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Der Hund liegt unter dem Tisch.",           tip:"wo? → Dativ"},
+  {prep:"vor (Lage)",   caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Ich stehe vor dem Haus.",                   tip:"wo? → Dativ"},
+  {prep:"hinter (Lage)",caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Der Garten ist hinter dem Haus.",           tip:"wo? → Dativ"},
+  {prep:"neben (Lage)", caso:"dativ",   hint:"wo? → Dativ",  ejemplo:"Sie sitzt neben dem Kind.",                 tip:"wo? → Dativ"},
+  {prep:"zwischen (Lage)",caso:"dativ", hint:"wo? → Dativ",  ejemplo:"Die Katze sitzt zwischen dem Sofa und dem Tisch.", tip:"wo? → Dativ"},
+  // Wechsel — Akkusativ (wohin?)
+  {prep:"in (Bewegung)",    caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Ich lege das Buch in das Regal.",        tip:"wohin? → Akkusativ"},
+  {prep:"an (Bewegung)",    caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Ich hänge das Bild an die Wand.",        tip:"wohin? → Akkusativ"},
+  {prep:"auf (Bewegung)",   caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Ich lege das Buch auf den Tisch.",       tip:"wohin? → Akkusativ"},
+  {prep:"über (Bewegung)",  caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Der Vogel fliegt über das Haus.",        tip:"wohin? → Akkusativ"},
+  {prep:"unter (Bewegung)", caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Der Hund kriecht unter den Tisch.",      tip:"wohin? → Akkusativ"},
+  {prep:"vor (Bewegung)",   caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Ich stelle das Auto vor das Haus.",      tip:"wohin? → Akkusativ"},
+  {prep:"hinter (Bewegung)",caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Er geht hinter das Haus.",              tip:"wohin? → Akkusativ"},
+  {prep:"neben (Bewegung)", caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Sie setzt sich neben das Kind.",         tip:"wohin? → Akkusativ"},
+  {prep:"zwischen (Bewegung)",caso:"akkusativ",hint:"wohin? → Akkusativ",ejemplo:"Sie legt sich zwischen das Sofa und den Tisch.", tip:"wohin? → Akkusativ"},
+];
+
+// ── PREPS FRASE ────────────────────────────────────────
+const PREPS_FRASE=[
+  {sentence:"Ich fahre ___ dem Bus zur Arbeit.",         blank:"mit",         options:["mit","ohne","seit"],          caso:"Dativ",    tip:"mit + Dativ"},
+  {sentence:"Das Buch liegt ___ dem Tisch.",             blank:"auf",         options:["auf","unter","hinter"],       caso:"Dativ",    tip:"auf + Dativ (wo?)"},
+  {sentence:"Wir gehen ___ den Park.",                   blank:"durch",       options:["durch","gegen","um"],         caso:"Akkusativ",tip:"durch + Akkusativ"},
+  {sentence:"Er kommt ___ der Schweiz.",                 blank:"aus",         options:["aus","von","bei"],            caso:"Dativ",    tip:"aus + Dativ"},
+  {sentence:"Das ist ein Geschenk ___ den Lehrer.",      blank:"für",         options:["für","gegen","ohne"],         caso:"Akkusativ",tip:"für + Akkusativ"},
+  {sentence:"Ich lerne Deutsch ___ zwei Jahren.",        blank:"seit",        options:["seit","nach","vor"],          caso:"Dativ",    tip:"seit + Dativ"},
+  {sentence:"Das Bild hängt ___ der Wand.",              blank:"an",          options:["an","auf","über"],            caso:"Dativ",    tip:"an + Dativ (wo?)"},
+  {sentence:"Sie sitzt ___ dem Fenster.",                blank:"neben",       options:["neben","zwischen","hinter"],  caso:"Dativ",    tip:"neben + Dativ (wo?)"},
+  {sentence:"Ich gehe ___ dem Arzt.",                    blank:"zu",          options:["zu","bei","nach"],            caso:"Dativ",    tip:"zu + Dativ"},
+  {sentence:"Er läuft ___ die Schule.",                  blank:"um",          options:["um","durch","für"],           caso:"Akkusativ",tip:"um + Akkusativ"},
+  {sentence:"Die Katze springt ___ den Tisch.",          blank:"auf",         options:["auf","über","unter"],         caso:"Akkusativ",tip:"auf + Akkusativ (wohin?)"},
+  {sentence:"Wir fahren ___ Berlin.",                    blank:"nach",        options:["nach","zu","in"],             caso:"Dativ",    tip:"nach + Dativ (Städte)"},
+  {sentence:"Der Hund liegt ___ dem Sofa.",              blank:"unter",       options:["unter","neben","vor"],        caso:"Dativ",    tip:"unter + Dativ (wo?)"},
+  {sentence:"Sie kämpft ___ die Wahrheit.",              blank:"für",         options:["für","gegen","ohne"],         caso:"Akkusativ",tip:"für + Akkusativ"},
+  {sentence:"Das Café ist ___ dem Bahnhof.",             blank:"gegenüber",   options:["gegenüber","neben","hinter"], caso:"Dativ",    tip:"gegenüber + Dativ"},
+  {sentence:"Ich lege das Buch ___ das Regal.",          blank:"in",          options:["in","auf","unter"],           caso:"Akkusativ",tip:"in + Akkusativ (wohin?)"},
+  {sentence:"Er wohnt ___ seiner Schwester.",            blank:"bei",         options:["bei","mit","zu"],             caso:"Dativ",    tip:"bei + Dativ"},
+  {sentence:"Das Flugzeug fliegt ___ die Wolken.",       blank:"über",        options:["über","unter","durch"],       caso:"Akkusativ",tip:"über + Akkusativ (wohin?)"},
+  {sentence:"Sie geht ___ den Supermarkt.",              blank:"in",          options:["in","zu","durch"],            caso:"Akkusativ",tip:"in + Akkusativ (wohin?)"},
+  {sentence:"Er sitzt ___ dem Auto.",                    blank:"in",          options:["in","auf","bei"],             caso:"Dativ",    tip:"in + Dativ (wo?)"},
+  {sentence:"___ des Regens bleiben wir zu Hause.",      blank:"Wegen",       options:["Wegen","Trotz","Während"],    caso:"Genitiv",  tip:"wegen + Genitiv"},
+  {sentence:"___ des Fehlers hat er gewonnen.",          blank:"Trotz",       options:["Trotz","Wegen","Infolge"],    caso:"Genitiv",  tip:"trotz + Genitiv"},
+  {sentence:"___ des Unterrichts schläft er.",           blank:"Während",     options:["Während","Seit","Nach"],      caso:"Genitiv",  tip:"während + Genitiv"},
+  {sentence:"___ der Stadt gibt es Ruhe.",               blank:"Außerhalb",   options:["Außerhalb","Innerhalb","Gegenüber"],caso:"Genitiv",tip:"außerhalb + Genitiv"},
+  {sentence:"___ des Wetters fällt das Spiel aus.",      blank:"Aufgrund",    options:["Aufgrund","Trotz","Wegen"],   caso:"Genitiv",  tip:"aufgrund + Genitiv"},
+  {sentence:"Ich gehe ___ den Hund spazieren.",          blank:"ohne",        options:["ohne","mit","für"],           caso:"Akkusativ",tip:"ohne + Akkusativ"},
+  {sentence:"Das Dorf liegt ___ des Flusses.",           blank:"jenseits",    options:["jenseits","diesseits","außerhalb"],caso:"Genitiv",tip:"jenseits + Genitiv"},
+  {sentence:"Er handelt ___ dem Gesetz.",                blank:"entgegen",    options:["entgegen","gemäß","gegenüber"],caso:"Dativ",   tip:"entgegen + Dativ"},
+  {sentence:"Der Hund kriecht ___ den Tisch.",           blank:"unter",       options:["unter","auf","neben"],        caso:"Akkusativ",tip:"unter + Akkusativ (wohin?)"},
+  {sentence:"___ dem Konzert treffen wir uns.",          blank:"Nach",        options:["Nach","Seit","Vor"],          caso:"Dativ",    tip:"nach + Dativ (zeitlich)"},
+  {sentence:"Sie legt sich ___ das Sofa.",               blank:"hinter",      options:["hinter","vor","neben"],       caso:"Akkusativ",tip:"hinter + Akkusativ (wohin?)"},
+  {sentence:"___ dem Plan läuft alles gut.",             blank:"Entsprechend",options:["Entsprechend","Gemäß","Wegen"],caso:"Dativ",   tip:"entsprechend + Dativ"},
+];
+
+// ── PREPLIST reference data ────────────────────────────
+const PREPLIST=[
+  {g:"Dativ — immer",col:"var(--dativ)",items:[
+    {p:"mit",    e:"Ich fahre mit dem Bus.",           tr:"Voy en autobús."},
+    {p:"aus",    e:"Sie kommt aus der Türkei.",        tr:"Viene de Turquía."},
+    {p:"bei",    e:"Er wohnt bei seinem Freund.",      tr:"Vive con su amigo."},
+    {p:"nach",   e:"Wir fliegen nach Madrid.",         tr:"Volamos a Madrid."},
+    {p:"seit",   e:"Ich warte seit einer Stunde.",     tr:"Espero desde hace una hora."},
+    {p:"von",    e:"Das Buch ist von dem Autor.",      tr:"El libro es de ese autor."},
+    {p:"zu",     e:"Sie geht zu der Ärztin.",          tr:"Va a la médica."},
+    {p:"außer",  e:"Außer mir kommt niemand.",         tr:"Aparte de mí no viene nadie."},
+    {p:"gegenüber",e:"Das Kino ist gegenüber dem Hotel.",tr:"El cine está frente al hotel."},
+    {p:"ab",     e:"Ab dem ersten Januar gilt das Gesetz.",tr:"Desde el 1 de enero rige la ley."},
+    {p:"entgegen",e:"Er handelt entgegen dem Rat.",   tr:"Actúa en contra del consejo."},
+    {p:"gemäß",  e:"Gemäß dem Vertrag hat er Recht.", tr:"Según el contrato tiene razón."},
+  ]},
+  {g:"Akkusativ — immer",col:"var(--akk)",items:[
+    {p:"durch",  e:"Wir laufen durch den Wald.",       tr:"Corremos por el bosque."},
+    {p:"für",    e:"Das ist für den Chef.",             tr:"Eso es para el jefe."},
+    {p:"gegen",  e:"Sie stimmt gegen den Plan.",       tr:"Vota en contra del plan."},
+    {p:"ohne",   e:"Er geht ohne den Schlüssel.",      tr:"Sale sin la llave."},
+    {p:"um",     e:"Das Kind läuft um den Tisch.",     tr:"El niño corre alrededor de la mesa."},
+    {p:"bis",    e:"Wir fahren bis den nächsten Bahnhof.",tr:"Vamos hasta la siguiente estación."},
+    {p:"entlang",e:"Sie gehen den Fluss entlang.",     tr:"Caminan a lo largo del río."},
+    {p:"wider",  e:"Das geht wider den Willen.",       tr:"Eso va contra la voluntad."},
+  ]},
+  {g:"Genitiv — immer",col:"var(--gen)",items:[
+    {p:"wegen",  e:"Wegen des Regens bleiben wir drinnen.",tr:"Nos quedamos dentro por la lluvia."},
+    {p:"trotz",  e:"Trotz des Sturms fährt der Zug.",  tr:"A pesar de la tormenta el tren sale."},
+    {p:"statt/anstatt",e:"Statt des Kaffees trinke ich Tee.",tr:"En vez de café tomo té."},
+    {p:"während",e:"Während des Films schläft er.",    tr:"Durante la película se duerme."},
+    {p:"innerhalb",e:"Innerhalb des Gebäudes ist es warm.",tr:"Dentro del edificio hace calor."},
+    {p:"außerhalb",e:"Außerhalb der Stadt gibt es Felder.",tr:"Fuera de la ciudad hay campos."},
+    {p:"aufgrund",e:"Aufgrund der Kosten lehnen wir ab.",tr:"Rechazamos por los costes."},
+    {p:"mithilfe",e:"Mithilfe des Wörterbuchs verstehe ich es.",tr:"Con ayuda del diccionario lo entiendo."},
+    {p:"angesichts",e:"Angesichts der Lage müssen wir handeln.",tr:"Ante la situación debemos actuar."},
+    {p:"infolge",e:"Infolge des Unfalls gab es Stau.",tr:"A raíz del accidente hubo tráfico."},
+    {p:"jenseits",e:"Jenseits des Berges liegt das Dorf.",tr:"Al otro lado de la montaña está el pueblo."},
+    {p:"diesseits",e:"Diesseits der Grenze ist alles ruhig.",tr:"A este lado de la frontera todo está tranquilo."},
+  ]},
+  {g:"Wechselpräpositionen — wo? (Dativ) / wohin? (Akkusativ)",col:"var(--text)",items:[
+    {p:"in",    e:"Das Heft liegt in der Tasche. (Dativ — wo?)\nSie legt das Heft in die Tasche. (Akk. — wohin?)",tr:"El cuaderno está en el bolso. / Lo pone en el bolso."},
+    {p:"an",    e:"Das Bild hängt an der Wand. (Dativ)\nEr hängt das Bild an die Wand. (Akk.)",tr:"El cuadro cuelga. / Lo cuelga."},
+    {p:"auf",   e:"Die Katze liegt auf dem Sofa. (Dativ)\nSie springt auf das Sofa. (Akk.)",tr:"El gato está en el sofá. / Salta al sofá."},
+    {p:"über",  e:"Die Lampe hängt über dem Tisch. (Dativ)\nEr hängt sie über den Tisch. (Akk.)",tr:"La lámpara cuelga sobre la mesa. / La cuelga."},
+    {p:"unter", e:"Der Hund schläft unter dem Bett. (Dativ)\nEr kriecht unter das Bett. (Akk.)",tr:"El perro duerme bajo la cama. / Se mete."},
+    {p:"vor",   e:"Das Auto steht vor dem Haus. (Dativ)\nEr stellt es vor das Haus. (Akk.)",tr:"El coche está delante. / Lo pone delante."},
+    {p:"hinter",e:"Der Garten ist hinter dem Haus. (Dativ)\nSie geht hinter das Haus. (Akk.)",tr:"El jardín está detrás. / Va detrás."},
+    {p:"neben", e:"Er sitzt neben dem Chef. (Dativ)\nEr setzt sich neben den Chef. (Akk.)",tr:"Está al lado del jefe. / Se sienta al lado."},
+    {p:"zwischen",e:"Die Katze sitzt zwischen dem Stuhl und dem Tisch. (Dativ)\nSie setzt sich zwischen den Stuhl und den Tisch. (Akk.)",tr:"El gato está entre ambos. / Se sienta entre ambos."},
+  ]},
+];
+
+// ── ESTADO ─────────────────────────────────────────────
+const SESSION_SIZE=20, T_OK=1400, T_ERR=2800;
+let mod='artikel';
+let state=loadState();
+let session={queue:[],index:0,correct:0,current:null,retryPending:[]};
+let streak=0, best=state.best||0, locked=false;
+
+function loadState(){try{const s=localStorage.getItem('dtrainerv3');if(s)return JSON.parse(s);}catch(e){}return{sc:{},ps:{},best:0,ta:0,tc:0};}
+function save(){localStorage.setItem('dtrainerv3',JSON.stringify(state));}
+function wW(w){const s=state.sc[w.w]||{c:0,e:0};const t=s.c+s.e;return t===0?3:1+(s.e/t)*8;}
+function wP(p){const k=p.prep+(p.caso||'');const s=state.ps[k]||{c:0,e:0};const t=s.c+s.e;return t===0?3:1+(s.e/t)*8;}
+
+function buildQ(pool,wFn){
+  const wts=pool.map(wFn),tot=wts.reduce((a,b)=>a+b,0);
+  const q=[],used=new Set();let att=0;
+  while(q.length<SESSION_SIZE&&att<3000){att++;
+    let r=Math.random()*tot,cum=0;
+    for(let i=0;i<pool.length;i++){cum+=wts[i];if(r<=cum){if(!used.has(i)){used.add(i);q.push({...pool[i],isRetry:false});}break;}}
+    if(used.size===pool.length)break;}
+  return q;
+}
+
+// ── SWITCH ──────────────────────────────────────────────
+function switchModule(m){
+  mod=m;
+  ['artikel','caso','frase','preplist'].forEach(x=>document.getElementById('tab-'+x).className='tab'+(x===m?' active':''));
+  if(m==='preplist'){renderPrepList();return;}
+  hidePrepList(); startSession();
+}
+
+function showUI(){
+  hidePrepList();
+  document.getElementById('card-wrap').style.display='';
+  document.getElementById('progress-wrap').style.display='';
+  document.getElementById('streak-row').style.display='';
+  document.getElementById('main-card').style.display='';
+  document.getElementById('art-buttons').style.display=mod==='artikel'?'':'none';
+  document.getElementById('caso-buttons').style.display=mod==='caso'?'':'none';
+  document.getElementById('hint-row').style.display=mod==='preplist'?'none':'';
+  let fb=document.getElementById('frase-buttons');if(fb)fb.remove();
+}
+
+function renderPrepList(){
+  document.getElementById('card-wrap').style.display='none';
+  document.getElementById('art-buttons').style.display='none';
+  document.getElementById('caso-buttons').style.display='none';
+  document.getElementById('hint-row').style.display='none';
+  document.getElementById('progress-wrap').style.display='none';
+  document.getElementById('streak-row').style.display='none';
+  let fb=document.getElementById('frase-buttons');if(fb)fb.remove();
+  const el=document.getElementById('preplist-view');
+  el.style.display='';
+  el.innerHTML=PREPLIST.map(g=>`
+    <div class="pg-group">
+      <div class="pg-label">${g.g}</div>
+      ${g.items.map(it=>`
+        <div class="pg-item">
+          <div class="pg-prep" style="color:${g.col}">${it.p}</div>
+          <div class="pg-example">${it.e}</div>
+          <div class="pg-tr">${it.tr}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+function hidePrepList(){document.getElementById('preplist-view').style.display='none';}
+
+// ── SESSION ─────────────────────────────────────────────
+function startSession(){
+  showUI();
+  document.getElementById('session-complete').classList.remove('show');
+  if(mod==='artikel') session.queue=buildQ(WORDS,wW);
+  else if(mod==='caso') session.queue=buildQ(PREPS_CASO,wP);
+  else session.queue=buildQ(PREPS_FRASE,wP);
+  session.index=0;session.correct=0;session.retryPending=[];
+  streak=0;upStreak();upProgress();nextCard();
+}
+
+function nextCard(){
+  if(session.retryPending.length){
+    const at=Math.min(session.index+2,session.queue.length);
+    session.retryPending.forEach((r,i)=>session.queue.splice(at+i,0,r));
+    session.retryPending=[];
+  }
+  if(session.index>=session.queue.length){showComplete();return;}
+  session.current=session.queue[session.index];
+  locked=false;
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('main-card').className='card';
+  document.getElementById('retry-badge').style.display=session.current.isRetry?'':'none';
+  document.getElementById('word-sub').classList.add('hidden');
+  if(mod==='artikel') renderArtikel();
+  else if(mod==='caso') renderCaso();
+  else renderFrase();
+  upProgress();
+}
+
+function renderArtikel(){
+  const w=session.current;
+  document.getElementById('word-cat').textContent=w.c;
+  document.getElementById('word-display').textContent=w.w;
+  document.getElementById('word-sub').textContent=w.t;
+}
+function renderCaso(){
+  const p=session.current;
+  document.getElementById('word-cat').textContent='Welcher Kasus?';
+  document.getElementById('word-display').textContent=p.prep;
+  document.getElementById('word-sub').textContent=p.hint+'\n'+p.tip;
+  document.getElementById('word-sub').classList.remove('hidden');
+}
+function renderFrase(){
+  const p=session.current;
+  document.getElementById('word-cat').textContent='Richtige Präposition wählen · Kasus: '+p.caso;
+  const parts=p.sentence.split('___');
+  document.getElementById('word-display').innerHTML=
+    `<span style="font-family:'Fraunces',serif;font-size:20px;font-weight:300;font-style:italic;line-height:1.6">`+
+    parts[0]+`<span id="blank-span" style="display:inline-block;min-width:55px;border-bottom:2px solid var(--der);color:var(--der);font-weight:700;font-style:normal;padding:0 3px">___</span>`+(parts[1]||'')+`</span>`;
+  document.getElementById('word-sub').textContent=p.tip;
+  document.getElementById('word-sub').classList.remove('hidden');
+  makeFraseButtons(p.options,p.blank,p.tip);
+}
+function makeFraseButtons(opts,correct,tip){
+  let old=document.getElementById('frase-buttons');if(old)old.remove();
+  const wrap=document.createElement('div');
+  wrap.id='frase-buttons';
+  wrap.style.cssText='width:100%;max-width:440px;display:flex;flex-direction:column;gap:7px;margin-top:12px';
+  opts.forEach(opt=>{
+    const b=document.createElement('button');
+    b.className='btn';
+    b.style.cssText='font-family:"DM Mono",monospace;font-size:14px;padding:13px;letter-spacing:.04em;color:var(--text);border-color:var(--border);border-radius:12px;background:var(--surface)';
+    b.textContent=opt;
+    b.onclick=()=>answerFrase(opt,correct,tip,b);
+    wrap.appendChild(b);
+  });
+  document.getElementById('hint-row').insertAdjacentElement('beforebegin',wrap);
+}
+
+// ── ANSWERS ─────────────────────────────────────────────
+function answerArtikel(chosen){
+  if(locked)return;locked=true;
+  const c=session.current,ok=chosen===c.a;
+  if(!state.sc[c.w])state.sc[c.w]={c:0,e:0};
+  state.ta=(state.ta||0)+1;
+  if(ok){state.sc[c.w].c++;state.tc=(state.tc||0)+1;streak++;if(streak>best){best=streak;state.best=best;}session.correct++;}
+  else{state.sc[c.w].e++;streak=0;}
+  upStreak();save();
+  const card=document.getElementById('main-card'),fb=document.getElementById('feedback');
+  const m={der:'btn-der',die:'btn-die',das:'btn-das'};
+  document.getElementById('word-sub').classList.remove('hidden');
+  if(ok){card.classList.add('correct');fb.className='feedback show correct-fb';fb.textContent='✓ '+c.a+' '+c.w;document.getElementById(m[chosen]).classList.add('flash-correct');}
+  else{card.classList.add('wrong');fb.className='feedback show wrong-fb';fb.textContent='✗ '+c.a+' '+c.w+'\n  nicht "'+chosen+'"';document.getElementById(m[chosen]).classList.add('flash-wrong');document.getElementById(m[c.a]).style.background=c.a==='der'?'rgba(79,142,247,.2)':c.a==='die'?'rgba(247,79,142,.2)':'rgba(79,247,160,.2)';if(!c.isRetry)session.retryPending.push({...c,isRetry:true});}
+  session.index++;
+  setTimeout(()=>{['btn-der','btn-die','btn-das'].forEach(id=>{const b=document.getElementById(id);b.className=b.className.replace(/ flash-(correct|wrong)/g,'');b.style.background='';});nextCard();},ok?T_OK:T_ERR);
+}
+
+function answerCaso(chosen){
+  if(locked)return;locked=true;
+  const c=session.current,ok=chosen===c.caso;
+  const k=c.prep+(c.caso||'');if(!state.ps[k])state.ps[k]={c:0,e:0,l:c.prep};
+  if(ok){state.ps[k].c++;session.correct++;streak++;if(streak>best){best=streak;state.best=best;}}
+  else{state.ps[k].e++;streak=0;if(!c.isRetry)session.retryPending.push({...c,isRetry:true});}
+  upStreak();save();
+  const card=document.getElementById('main-card'),fb=document.getElementById('feedback');
+  const idMap={dativ:'btn-dativ',akkusativ:'btn-akk',genitiv:'btn-gen'};
+  if(ok){card.classList.add('correct');fb.className='feedback show correct-fb';fb.textContent='✓ '+c.caso+'\n→ '+c.ejemplo;document.getElementById(idMap[chosen]).classList.add('flash-correct');}
+  else{card.classList.add('wrong');fb.className='feedback show wrong-fb';fb.textContent='✗ '+c.caso+', nicht '+chosen+'\n→ '+c.ejemplo;['btn-dativ','btn-akk','btn-gen'].forEach(id=>{const b=document.getElementById(id);if(b)b.classList.remove('flash-correct','flash-wrong');});}
+  session.index++;
+  setTimeout(()=>{['btn-dativ','btn-akk','btn-gen'].forEach(id=>{const b=document.getElementById(id);if(b){b.classList.remove('flash-correct','flash-wrong');b.style.background='';}});nextCard();},ok?T_OK:T_ERR);
+}
+
+function answerFrase(chosen,correct,tip,btn){
+  if(locked)return;locked=true;
+  const c=session.current,ok=chosen===correct;
+  const k=c.prep+(c.caso||'');if(!state.ps[k])state.ps[k]={c:0,e:0,l:c.blank||c.prep};
+  if(ok){state.ps[k].c++;session.correct++;streak++;if(streak>best){best=streak;state.best=best;}}
+  else{state.ps[k].e++;streak=0;if(!c.isRetry)session.retryPending.push({...c,isRetry:true});}
+  upStreak();save();
+  const card=document.getElementById('main-card'),fb=document.getElementById('feedback');
+  const bl=document.getElementById('blank-span');
+  if(bl){bl.textContent=chosen;bl.style.color=ok?'var(--das)':'var(--wrong)';bl.style.borderColor=ok?'var(--das)':'var(--wrong)';}
+  if(ok){card.classList.add('correct');btn.style.background='color-mix(in srgb,var(--das) 20%,var(--surface))';btn.style.borderColor='var(--das)';fb.className='feedback show correct-fb';fb.textContent='✓ '+tip+'\n→ '+c.sentence.replace('___',correct);}
+  else{card.classList.add('wrong');btn.style.background='color-mix(in srgb,var(--wrong) 20%,var(--surface))';btn.style.borderColor='var(--wrong)';fb.className='feedback show wrong-fb';fb.textContent='✗ "'+correct+'" — '+tip+'\n→ '+c.sentence.replace('___',correct);document.querySelectorAll('#frase-buttons .btn').forEach(b=>{if(b.textContent.trim()===correct){b.style.background='color-mix(in srgb,var(--das) 20%,var(--surface))';b.style.borderColor='var(--das)';}});}
+  document.querySelectorAll('#frase-buttons .btn').forEach(b=>b.onclick=null);
+  session.index++;
+  setTimeout(()=>{let f=document.getElementById('frase-buttons');if(f)f.remove();nextCard();},ok?T_OK:T_ERR);
+}
+
+function showHint(){document.getElementById('word-sub').classList.remove('hidden');}
+function upStreak(){document.getElementById('streak-num').textContent=streak;}
+function upProgress(){const p=Math.min((session.index/SESSION_SIZE)*100,100);document.getElementById('progress-fill').style.width=p+'%';document.getElementById('progress-label').textContent=Math.min(session.index,SESSION_SIZE)+'/'+SESSION_SIZE;}
+
+function showComplete(){
+  document.getElementById('main-card').style.display='none';
+  document.getElementById('art-buttons').style.display='none';
+  document.getElementById('caso-buttons').style.display='none';
+  document.getElementById('hint-row').style.display='none';
+  let fb=document.getElementById('frase-buttons');if(fb)fb.remove();
+  const pct=Math.round((session.correct/SESSION_SIZE)*100);
+  const emoji=pct>=90?'🏆':pct>=70?'🎯':pct>=50?'💪':'📚';
+  const title=pct>=90?'Ausgezeichnet!':pct>=70?'Sehr gut!':pct>=50?'Gut!':'Übung macht den Meister!';
+  document.getElementById('sc-emoji').textContent=emoji;
+  document.getElementById('sc-title').textContent=title;
+  document.getElementById('sc-sub').textContent=session.correct+'/'+SESSION_SIZE+' richtig ('+pct+'%)';
+  document.getElementById('session-complete').classList.add('show');
+  document.getElementById('progress-fill').style.width='100%';
+  document.getElementById('progress-label').textContent=SESSION_SIZE+'/'+SESSION_SIZE;
+}
+
+// ── STATS ──────────────────────────────────────────────
+function showStats(){
+  const ta=state.ta||0,tc=state.tc||0;
+  document.getElementById('s-total').textContent=ta;
+  document.getElementById('s-acc').textContent=ta>0?Math.round(tc/ta*100)+'%':'–';
+  document.getElementById('s-streak').textContent=best;
+  let mastered=0;
+  WORDS.forEach(w=>{const s=state.sc[w.w];if(!s)return;const t=s.c+s.e;if(t>=5&&s.e/t<.2)mastered++;});
+  document.getElementById('s-mastered').textContent=mastered;
+  const hw=WORDS.map(w=>{const s=state.sc[w.w]||{c:0,e:0};const t=s.c+s.e;return{...w,e:s.e,t,r:t>0?s.e/t:0};}).filter(w=>w.t>=2&&w.e>0).sort((a,b)=>b.e-a.e).slice(0,8);
+  document.getElementById('hard-words').innerHTML=hw.length===0?'<div style="color:var(--muted);font-size:12px;padding:6px 0">Noch keine Daten.</div>':hw.map(w=>`<div class="hard-row"><div><div class="hard-name">${w.a} ${w.w}</div><div class="hard-bar"><div class="hard-fill" style="width:${Math.min(w.r*100,100)}%"></div></div></div><div class="hard-meta">${w.e} Fehler<br>${Math.round(w.r*100)}%</div></div>`).join('');
+  const hp=Object.entries(state.ps||{}).map(([k,s])=>{const t=s.c+s.e;return{k,l:s.l||k,e:s.e,t,r:t>0?s.e/t:0};}).filter(p=>p.t>=2&&p.e>0).sort((a,b)=>b.e-a.e).slice(0,8);
+  document.getElementById('hard-preps').innerHTML=hp.length===0?'<div style="color:var(--muted);font-size:12px;padding:6px 0">Noch keine Daten.</div>':hp.map(p=>`<div class="hard-row"><div><div class="hard-name">${p.l}</div><div class="hard-bar"><div class="hard-fill" style="width:${Math.min(p.r*100,100)}%"></div></div></div><div class="hard-meta">${p.e} Fehler<br>${Math.round(p.r*100)}%</div></div>`).join('');
+  document.getElementById('stats-screen').classList.add('active');
+}
+function hideStats(){document.getElementById('stats-screen').classList.remove('active');}
+function confirmReset(){if(confirm('Gesamten Fortschritt zurücksetzen?')){localStorage.removeItem('dtrainerv3');state=loadState();best=0;hideStats();startSession();}}
+function dismissInstall(){localStorage.setItem('inst_d','1');document.getElementById('install-banner').classList.remove('show');}
+
+window.addEventListener('load',()=>{
+  const iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(iOS&&!window.navigator.standalone&&!localStorage.getItem('inst_d'))document.getElementById('install-banner').classList.add('show');
+  startSession();
+});
+window.addEventListener('keydown',e=>{
+  if(mod==='artikel'){if(e.key==='1')answerArtikel('der');if(e.key==='2')answerArtikel('die');if(e.key==='3')answerArtikel('das');}
+  if(mod==='caso'){if(e.key==='1')answerCaso('dativ');if(e.key==='2')answerCaso('akkusativ');if(e.key==='3')answerCaso('genitiv');}
+});
+</script>
+</body>
+</html>
